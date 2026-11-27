@@ -19,8 +19,9 @@ A team brings **their own use case** and has 1.5 days to build a small model for
 **matches or beats the teacher**, then runs it offline on their laptop.
 
 **distil-cli does the work.** Follow its workflow, gates, run log, make-rows and error-analysis
-protocols as written. This file only adds what the hackathon changes: how to iterate fast and
-run fast. Where the two differ, this file wins for the weekend.
+protocols as written, except the two steps [skipped for speed](#the-weekend-step-by-step). This
+file only adds what the hackathon changes: how to iterate fast and run fast. Where the two
+differ, this file wins for the weekend.
 
 ## Start: ask for the use case
 
@@ -61,77 +62,34 @@ Credits: $50 at signup, plus **$150** for the hackathon when the team posts thei
 in **#general** on the [distil labs Slack](https://join.slack.com/t/distil-labs-community/shared_invite/zt-36zqj87le-i3quWUn2bjErRq22xoE58g).
 More on request. Ask the team for their weekend budget and put it in the run log.
 
-## The loop, command by command
+## The weekend, step by step
 
-What we ran in prep, in order. Every billed command takes `--dry-run` first: run it, say the
-price, then run it for real. Show the team each job at `https://app.distillabs.ai/datasets/<id>`
-or `/slms/<id>`. Times are what our prep jobs took from submit to finish with
+distil-cli runs every step below with its own commands and its own run directory layout; use
+both as written. Times are what our prep jobs took from submit to finish with
 `llm_num_parallel_requests: 32`; with many teams on the platform, queueing can add to them.
 
-**1. Upload the root Dataset** (seconds):
+| Step | In distil-cli | Time |
+|---|---|---|
+| Upload the root Dataset | Phase 0 | seconds |
+| No data: generate the test set from the task description and the team's examples ([no data](#start-ask-for-the-use-case)) | Phase 3, make-rows into the test split | a smoke and a full run, minutes each |
+| Teacher check: up to 3 prompt rounds, each a new root Dataset ([when the teacher scores low](#when-the-teacher-scores-low)) | Phases 2 and 3 | about 5 minutes a round |
+| Smoke the first train set | make-rows, Step 2 | 2 to 4 minutes |
+| Generate the first train set | Phase 4, iteration 1 | 5 minutes for short rows, about 25 for long documents |
+| Train two sizes at once | Phase 4, Step 3 | about 30 minutes for 2B, about 50 for 4B, evaluation included |
+| Top up the best Dataset and train again | Phase 4, later iterations | 1 to 1.5 hours per iteration |
 
-```bash
-distil dataset create --data my-task                    # prints <root-id>; on ECONNRESET run it again
-```
+That fits 4 to 6 iterations between Saturday midday and Sunday morning. A job cancelled within
+30 minutes of submitting is refunded.
 
-**2. Teacher check, two runs at once** (about 5 minutes):
+**Skipped for speed.** To fit more iterations in, skip two distil-cli steps, and note each skip
+in the run log:
 
-```bash
-distil teacher-evaluation create-from-dataset <root-id>
-distil teacher-evaluation create-from-dataset <root-id>
-distil teacher-evaluation metrics <te-id>               # the score; the gap between the two runs is the noise
-distil teacher-evaluation download-predictions <te-id>  # the teacher's answers, to read the wrong ones
-```
-
-For prompt round 2, edit `task_description` in a copy of the folder, upload it as a new root
-(`distil dataset create --data my-task-r2`) and run the two evaluations on it. Keep the best
-round's root id.
-
-**3. Smoke 128 rows** (2 to 4 minutes):
-
-```bash
-distil dataset download-metadata -d smoke <root-id>     # free: config.yaml and job_description.json
-# edit smoke/config.yaml: synthgen.train_generation_target: 128
-distil dataset generate-synthetic-data-train --config smoke/config.yaml <root-id>
-distil dataset download -d smoke-rows <smoke-id>        # read the rows, count the mix
-```
-
-If the rows are off, fix the mutators, generation prompt or validator in the root files, upload
-a new root, and smoke again.
-
-**4. Generate 1,500 rows** (5 minutes for short rows, about 25 for long documents):
-
-```bash
-distil dataset generate-synthetic-data-train <root-id>  # the root config says 1500; prints <data-id>
-```
-
-**5. Train two sizes at once** (about 30 minutes for 2B, about 50 for 4B, evaluation included):
-
-```bash
-distil dataset download-metadata -d train <data-id>
-# copy train/config.yaml to 2b.yaml and 4b.yaml; set base.student_model_name and the batch from the tables below
-distil slm create-from-dataset --config 2b.yaml <data-id>
-distil slm create-from-dataset --config 4b.yaml <data-id>
-distil slm metrics <slm-id>                             # student vs base model
-distil slm download-predictions <slm-id>                # the student's answers, for the error analysis
-```
-
-**6. Top up on the best Dataset and train again** (about 1 hour together):
-
-```bash
-distil dataset download-metadata -d topup <best-data-id>
-# edit topup/config.yaml: train_generation_target 300 to 700, the mutator values and weights aimed at the failure;
-# edit topup/job_description.json only in synthetic_data_generation_instructions
-distil dataset generate-synthetic-data-train --config topup/config.yaml --job-description topup/job_description.json <best-data-id>
-distil slm create-from-dataset --config 4b.yaml <new-data-id>
-```
-
-The new Dataset holds the parent's rows plus the new ones, so training data only grows. One
-iteration (top-up plus training) took us about 1 to 1.5 hours, so a team can fit 4 to 6
-iterations between Saturday midday and Sunday morning.
-
-Check any job with `distil <dataset|teacher-evaluation|slm> status <id>`. Cancel a wrong
-submission early: a job cancelled within 30 minutes is refunded.
+- **The blind review of a smoke** (make-rows, Step 3). Read the smoke rows yourself instead and
+  show the team a few. Bring it back when a full run's rows turn out wrong, or the student
+  repeats a mistake the rows taught it.
+- **The memory smoke before training** (train-model, Step 3). The batch sizes in
+  [settings per kind of output](#settings-per-kind-of-output) fit in memory in our prep. Bring it
+  back for a student or a row length our prep did not cover, or after an out-of-memory failure.
 
 ## How to iterate fast
 
