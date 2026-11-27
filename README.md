@@ -1,6 +1,6 @@
 # distil labs hackathon, Nov 28-29 2026
 
-Bring your own use case. In 1.5 days, build a small language model (0.6B to 4B) for it on the distil labs platform, make it match or beat its teacher, and run it offline on your laptop.
+Bring your own use case, **no dataset required**. In 1.5 days, build a small language model (0.6B to 4B) for it on the distil labs platform, make it match or beat its teacher, and run it offline on your laptop.
 
 Your coding agent does the platform work with two skills: **distil-cli** (runs the jobs) and **[hackathon.md](hackathon.md)** (the hackathon's steps, settings and limits).
 
@@ -20,6 +20,8 @@ Your coding agent does the platform work with two skills: **distil-cli** (runs t
 3. Say: **"Let's start."** Your agent asks what you want to build, then sets up the CLI, credits and the distil-cli skill with you.
 
 No idea yet? Ask your agent for ideas. It shows a few, including a voice agent.
+
+No data yet? Describe what goes in and what comes out, and give 3 examples (or your tools, for an agent). Your agent and the platform write the test and training rows from that.
 
 ## What is in this repo
 

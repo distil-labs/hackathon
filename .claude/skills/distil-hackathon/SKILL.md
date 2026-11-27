@@ -32,14 +32,9 @@ Your first message, before any install or platform job:
 
 Then run distil-cli Phase 1, asking these together in one message (the team is short on time):
 the task in one sentence; what goes in; what comes out (label, short text, JSON, tool calls);
-three real examples with the exact outputs; the data they have; the costly mistakes; their
-laptop's RAM and chip (it caps the student size). Save the answers in `use-case.md`.
-
-**No data? That is fine, tell the team so.** A clear task description is enough to start: write
-the seed and test rows from it (distil-cli make-rows protocol), show the team a handful to
-confirm the inputs look real and the outputs are exactly right, then run the teacher evaluation
-on them as usual. The three examples they gave become the first rows. Real data, if they find
-some later, goes into the test set first.
+three real examples with the exact outputs; the data they have (none is fine, see
+[starting with no data](#starting-with-no-data)); the costly mistakes; their laptop's RAM and
+chip (it caps the student size). Save the answers in `use-case.md`.
 
 If the task needs fresh world knowledge, long open-ended writing, or images on a text model, say
 so and narrow it to the one bounded step a model must do every time.
@@ -62,6 +57,25 @@ Credits: $50 at signup, plus **$150** for the hackathon when the team posts thei
 in **#general** on the [distil labs Slack](https://join.slack.com/t/distil-labs-community/shared_invite/zt-36zqj87le-i3quWUn2bjErRq22xoE58g).
 More on request. Ask the team for their weekend budget and put it in the run log.
 
+## Starting with no data
+
+Most teams arrive with an app idea and no dataset. That is fine: tell the team so, and do not
+send them off to collect rows. The task description and their three examples are enough to
+bootstrap the root Dataset, and synthetic generation writes the training data from there.
+
+- **The test set:** about 100 to 150 rows covering the edge cases and the costly mistakes in
+  `use-case.md`, made with distil-cli's make-rows protocol into the test split. For an agent,
+  that is 100 to 150 conversations covering the real scenarios.
+- **The seed rows:** the team's three examples in `train.jsonl`, never in the test set. Do not
+  write more to reach a count: the first train set generation fills the split. An agent with
+  well-described tools needs none ([agents](#agents)).
+- **Review with the team:** read 15 to 20 test rows together and fix whatever does not match
+  their real app. The teacher wrote these rows and is then scored on them, so this review is
+  what makes the score mean something.
+- **Freeze after the teacher rounds**, with the prompt, not before. The teacher labelled the
+  test rows under the round-1 prompt, so when a later round adds a rule, correct the test rows
+  that break it as a local fix and log it in the run log.
+
 ## The weekend, step by step
 
 distil-cli runs every step below with its own commands and its own run directory layout; use
@@ -71,8 +85,8 @@ both as written. Times are what our prep jobs took from submit to finish with
 | Step | In distil-cli | Time |
 |---|---|---|
 | Upload the root Dataset | Phase 0 | seconds |
-| No data: generate the test set from the task description and the team's examples ([no data](#start-ask-for-the-use-case)) | Phase 3, make-rows into the test split | a smoke and a full run, minutes each |
-| Teacher check: up to 3 prompt rounds, each a new root Dataset ([when the teacher scores low](#when-the-teacher-scores-low)) | Phases 2 and 3 | about 5 minutes a round |
+| No data: generate the test set from the task description and the team's examples ([no data](#starting-with-no-data)) | Phase 3, make-rows into the test split | a smoke and a full run, minutes each |
+| Teacher check: up to 3 prompt rounds, each a new root Dataset ([when the teacher scores low](#when-the-teacher-scores-low)); with no data, download the test set once and put its `test.jsonl` in every new root | Phases 2 and 3 | about 5 minutes a round |
 | Smoke the first train set | make-rows, Step 2 | 2 to 4 minutes |
 | Generate the first train set | Phase 4, iteration 1 | 5 minutes for short rows, about 25 for long documents |
 | Train two sizes at once | Phase 4, Step 3 | about 30 minutes for 2B, about 50 for 4B, evaluation included |
