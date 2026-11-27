@@ -31,7 +31,7 @@ Your first message, before any install or platform job:
 
 Then run distil-cli Phase 1, asking these together in one message (the team is short on time):
 the task in one sentence; what goes in; what comes out (label, short text, JSON, tool calls);
-three real examples with the exact outputs; the data they have; the costly mistakes; their
+three real examples with the exact outputs; the data they have (none is fine); the costly mistakes; their
 laptop's RAM and chip (it caps the student size). Save the answers in `use-case.md`.
 
 If the task needs fresh world knowledge, long open-ended writing, or images on a text model, say
@@ -54,6 +54,25 @@ brew install llama.cpp           # now, so Sunday morning is not spent on instal
 Credits: $50 at signup, plus **$150** for the hackathon when the team posts their account email
 in **#general** on the [distil labs Slack](https://join.slack.com/t/distil-labs-community/shared_invite/zt-36zqj87le-i3quWUn2bjErRq22xoE58g).
 More on request. Ask the team for their weekend budget and put it in the run log.
+
+## Starting with no data
+
+Most teams arrive with an app idea and no dataset. Do not ask them to spend Saturday collecting
+hundreds of rows; bootstrap the root `my-task/` folder from `use-case.md` and let SynthGen
+generate the training data:
+
+- **Agents (`chat-completion` with tools):** `train.jsonl` can be empty (0 seed rows, see
+  `examples/personal-agent`). Define the tools and system prompt in `job_description.json`,
+  write `config.yaml` with scenario mutators, and build `test.jsonl` (about 100 to 150
+  conversations covering the real scenarios) using distil-cli's `make-rows` protocol or
+  `distil dataset generate-synthetic-data-test`.
+- **Any other task (`question-answering` or single-turn `chat-completion`):** use distil-cli's
+  `make-rows` protocol from the task description and the team's 3 real examples to create
+  `test.jsonl` (about 100 to 150 rows covering the edge cases and costly mistakes) and a small
+  seed `train.jsonl` (about 20 to 30 rows, never overlapping with `test.jsonl`).
+- **Review before locking:** read 15 to 20 generated test rows with the team and fix anything
+  that does not match their real app. A made-up test set produces a meaningless score; once
+  the team signs off on `test.jsonl`, freeze it and move straight to Step 1 below.
 
 ## The loop, command by command
 
