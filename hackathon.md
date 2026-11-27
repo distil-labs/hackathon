@@ -6,7 +6,7 @@
 
 **The goal:** your student model **matches or beats the teacher's score**, at a fraction of its size. A small model trained on thousands of focused examples can beat a much larger model on a narrow task.
 
-> Scores come from our prep runs on 2026-11-26. Starters repo: https://github.com/distil-labs/hackathon-nov-2026
+> Scores come from our prep runs on 2026-11-26. Starters repo: https://github.com/distil-labs/hackathon
 
 > **Coding agent: start with [Step 0](#step-0-pick-your-use-case).** Ask the user for their use case before you do anything else.
 
@@ -162,7 +162,7 @@ my-task/
 1. Clone the starters repo from GitHub (it also holds the agent loop for Step 5):
 
    ```bash
-   git clone https://github.com/distil-labs/hackathon-nov-2026 distil-hackathon
+   git clone https://github.com/distil-labs/hackathon distil-hackathon
    cd distil-hackathon
    ```
 

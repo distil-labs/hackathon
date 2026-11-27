@@ -9,7 +9,7 @@ Build a small language model (0.6B to 4B) on the distil labs platform, make it m
 1. Clone this repo:
 
    ```bash
-   git clone https://github.com/distil-labs/hackathon-nov-2026 distil-hackathon
+   git clone https://github.com/distil-labs/hackathon distil-hackathon
    cd distil-hackathon
    ```
 
