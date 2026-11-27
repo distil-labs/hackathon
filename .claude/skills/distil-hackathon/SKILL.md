@@ -34,6 +34,12 @@ the task in one sentence; what goes in; what comes out (label, short text, JSON,
 three real examples with the exact outputs; the data they have; the costly mistakes; their
 laptop's RAM and chip (it caps the student size). Save the answers in `use-case.md`.
 
+**No data? That is fine, tell the team so.** A clear task description is enough to start: write
+the seed and test rows from it (distil-cli make-rows protocol), show the team a handful to
+confirm the inputs look real and the outputs are exactly right, then run the teacher evaluation
+on them as usual. The three examples they gave become the first rows. Real data, if they find
+some later, goes into the test set first.
+
 If the task needs fresh world knowledge, long open-ended writing, or images on a text model, say
 so and narrow it to the one bounded step a model must do every time.
 
