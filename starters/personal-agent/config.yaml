@@ -1,0 +1,59 @@
+base:
+  task: chat-completion
+  student_model_name: Qwen3.5-4B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 0.0002
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  max_tool_calls_per_turn: 3
+  validation_instructions: 'Work out what a careful assistant should do at every assistant turn, then reject the example if any of these holds: (1) a tool argument is not stated in the conversation or a tool result (an invented name, address, time, id or text); (2) a tool is called for something the user did not ask; (3) send_email is called without the user''s explicit yes to sending that draft, or anything is deleted or changed without confirmation; (4) a required detail is missing and the assistant guesses instead of asking; (5) an answer after tool results states something the results do not say; (6) a tool result is inconsistent with the call it answers. Accept otherwise.'
+  mutators:
+  - name: scenario
+    values:
+    - a conversation that calls list_events
+    - a conversation that calls create_event
+    - a conversation that calls search_email
+    - a conversation that calls draft_email
+    - a conversation that calls send_email
+    - a conversation that calls add_task
+    - a conversation that calls list_tasks
+    - a conversation that calls search_notes
+    - a conversation that calls set_reminder
+    - a conversation that calls get_weather
+    - a conversation where a required detail is missing, so the assistant asks one short question first
+    - a conversation where the user asks to email someone, so the assistant drafts, shows the draft and asks 'Send it?'
+    - a conversation where the user confirms sending a draft shown earlier, so the assistant calls send_email
+    - a conversation that needs two tools, such as checking the calendar before creating an event
+    - a conversation the assistant answers directly with no tool call
+    target_distribution:
+    - 2
+    - 2
+    - 1
+    - 1
+    - 1
+    - 3
+    - 1
+    - 1
+    - 2
+    - 2
+    - 2
+    - 1
+    - 1
+    - 2
+    - 1
+  - name: turns
+    values:
+    - a conversation with one user turn
+    - a conversation with two user turns
+    - a conversation with three user turns
+    target_distribution:
+    - 3
+    - 2
+    - 1

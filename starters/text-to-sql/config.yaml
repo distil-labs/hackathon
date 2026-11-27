@@ -1,0 +1,52 @@
+base:
+  task: question-answering
+  student_model_name: Qwen3.5-4B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 3
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  validation_instructions: 'Check the example as a careful SQL engineer would. Read the schema (CREATE TABLE and INSERT statements) and the question, write the correct SQL yourself, then compare it with the example''s answer.
+
+    Reject the example if any of these hold:
+
+    - the user message does not follow the format "Schema:" + CREATE TABLE and INSERT statements, a blank line, then "Question:" + one question;
+
+    - the answer would not return the result the question asks for on this schema and data (wrong filter, wrong join key, wrong aggregation or grouping, missing DISTINCT where duplicates matter, wrong column);
+
+    - the answer uses a table or column that is not in the schema;
+
+    - the answer would not run on MySQL (PostgreSQL-only or SQLite-only syntax such as ILIKE, TOP, :: casts, strftime);
+
+    - the answer is not a single SQL statement, or contains explanation, comments or markdown code fences;
+
+    - the question is ambiguous so that two reasonable queries give different results, or it names the SQL to write.
+
+    Accept otherwise.
+
+    '
+  mutators:
+  - name: complexity
+    values:
+    - 'basic SQL: a simple SELECT with filters'
+    - 'aggregation: GROUP BY, COUNT, SUM, AVG, HAVING'
+    - 'single join: one JOIN between two tables'
+    - 'multiple joins: three or more tables joined'
+    - 'subqueries: a nested SELECT'
+    - 'window functions: RANK, ROW_NUMBER, running totals'
+    - 'set operations: UNION, INTERSECT or EXCEPT'
+    - 'CTEs: a WITH clause'
+    - 'data modification: the question asks to insert, update or delete rows, and the answer is one INSERT, UPDATE or DELETE statement'
+    target_distribution:
+    - 5
+    - 4
+    - 3
+    - 2
+    - 2
+    - 2
+    - 1
+    - 1
+    - 2

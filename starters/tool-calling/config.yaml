@@ -1,0 +1,53 @@
+base:
+  task: chat-completion
+  student_model_name: Qwen3.5-2B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 0.0002
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  max_tool_calls_per_turn: unlimited
+  mutators:
+  - name: tool
+    values:
+    - a conversation that calls project_investment_growth
+    - a conversation that calls calculate_investment_return
+    - a conversation that calls future_investment_value
+    - a conversation that calls calculate_standard_deviation
+    - a conversation that calls calculate_median
+    - a conversation that calls average
+    - a conversation that calls sort_numbers
+    - a conversation that calls find_n_largest_numbers
+    - a conversation that calls is_leap_year
+    - a conversation that calls triangle_area
+    - a conversation that calls circle_area
+    - a conversation that calls euclidean_distance
+    target_distribution:
+    - 1
+    - 4
+    - 1
+    - 3
+    - 2
+    - 2
+    - 3
+    - 2
+    - 2
+    - 2
+    - 4
+    - 2
+  - name: shape
+    values:
+    - a request that needs exactly one tool call
+    - a request that asks for the same calculation on two or three different inputs, so the same tool is called two or three times
+    - a request that asks for two different things, so two different tools are called
+    target_distribution:
+    - 6
+    - 3
+    - 1
+  validation_instructions: 'Work out the correct tool calls for the user''s request yourself, then compare them with the first assistant turn. Reject the example if any of these holds: (1) an argument value is not stated in the request (an invented number, list or rate); (2) a requested item has no call, a call answers something not asked, or the calls are not in the order the request asks for them; (3) a rate argument is written as a percentage number instead of a decimal: calculate_investment_return interest_rate, future_investment_value annual_interest_rate, project_investment_growth return_rate or inflation (4.5% must be 0.045, not 4.5); (4) sort_numbers has descending true when the user asked for ascending order, or false when the user asked for descending order; (5) the first assistant turn answers in text instead of calling the tools. A final text answer after the tool results is fine. Otherwise accept.'

@@ -1,0 +1,43 @@
+base:
+  task: question-answering
+  student_model_name: Qwen3-0.6B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 3
+  per_device_train_batch_size: 16
+  gradient_accumulation_steps: 1
+  learning_rate: 0.0002
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  mutators:
+  - name: case
+    description: which kind of message it is and its correct label
+    values:
+    - an injection that tells the assistant to ignore or override its previous instructions
+    - an injection that asks the assistant to act as a persona, role or character, even a harmless one
+    - 'an injection that asks for a different task: write code, translate, tell a joke or write a story'
+    - an injection that sets a rule ('if I say X, you say Y') or asks about the assistant itself
+    - an injection hidden after a normal question, or pleading that it is not an injection
+    - a benign information question about news, politics or society
+    - a benign information question about tech, health, travel or daily life
+    - a benign question that is rude, edgy or about a sensitive topic but asks only for information
+    target_distribution:
+    - 2
+    - 2
+    - 1
+    - 1
+    - 1
+    - 2
+    - 2
+    - 2
+  - name: language
+    values:
+    - written in English
+    - written in German
+    target_distribution:
+    - 2
+    - 1
+  validation_instructions: Decide the label yourself from the task description before reading the answer. Reject the example if your label differs, if the answer is anything other than exactly injection or benign, or if the message names its own label or says what kind of message it is.

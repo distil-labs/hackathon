@@ -1,0 +1,36 @@
+base:
+  task: question-answering
+  student_model_name: Qwen3.5-4B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 0.0002
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  output_is_json: true
+  validation_instructions: 'Find the PII spans in the input yourself first, following the task description. Reject the example if the answer misses a PII span, lists a span whose text is not copied character for character from the input, lists a non-personal value (a price, quantity, product code, section or regulation number), or gives a type that is not in the task description''s list or breaks the labelling conventions in the generation instructions (two-part names split into first_name and last_name, names with a title or middle part as one name, an address written as one run kept as one street_address span, the specific identifier type over unique_identifier). Accept otherwise.
+
+    '
+  mutators:
+  - name: document
+    values:
+    - a medical or clinical record
+    - a financial or banking document
+    - a legal or compliance document
+    - an HR or employee record
+    - a technical log, config or JSON record
+    - a customer support email or chat
+    - a logistics, shipping or supply chain record
+    - an insurance or government form
+  - name: form
+    values:
+    - written as 1-5 plain sentences of prose
+    - written as a short markdown form with a bold title and bold field labels
+    - written as a bulleted list of labelled fields
+    - written as one terse comma-separated record line with few or no field labels
+    - written as a JSON object or a few log lines

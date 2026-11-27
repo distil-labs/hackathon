@@ -1,0 +1,59 @@
+base:
+  task: question-answering
+  student_model_name: Qwen3.5-4B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 3
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  mutators:
+  - name: language
+    values:
+    - a diff in Python
+    - a diff in TypeScript
+    - a diff in JavaScript
+    - a diff in Go
+    - a diff in Java
+    - a diff in Rust
+    target_distribution:
+    - 4
+    - 2
+    - 2
+    - 2
+    - 1
+    - 1
+  - name: type
+    values:
+    - a new feature (feat)
+    - a bug fix (fix)
+    - a refactor
+    - a chore or dependency bump
+    - a test change
+    - a performance improvement
+    - a docs change
+    target_distribution:
+    - 8
+    - 4
+    - 2
+    - 2
+    - 1
+    - 1
+    - 1
+  - name: shape
+    values:
+    - a change to existing lines in one file (one or two hunks)
+    - a new file or a new function added
+    - a change across two or three files
+    - code removed or replaced by a simpler version
+    - a change to library or service code that breaks a public API (a changed function signature, return type or removed option), so the message has ! after the scope
+    target_distribution:
+    - 4
+    - 3
+    - 2
+    - 2
+    - 1
+  validation_instructions: 'Work out the commit message again from the diff alone, without looking at the answer first: which type the code change is (feat, fix, refactor, perf, chore, test, docs, build, ci, style), which module or component it touches, and what the main change is. Then reject the example if any of these hold: (1) the answer is not exactly one line of the form type(scope): summary (scope optional, ! allowed before the colon); (2) the answer''s type is wrong for the diff and not equally defensible (for example feat for a pure restructuring, fix where the old code was not visibly wrong, refactor where behaviour changes, perf where the old code produced wrong output); (3) the summary describes something the diff does not do (for example claims a bug the old code does not have), or misses the main change; (4) the summary is longer than 72 characters, not imperative, or not lower case at the start; (5) ! is used without a breaking change in the diff, ! is used on a test, docs
+    or chore commit, or a clear public API break has no !; (6) the input is not a plausible unified git diff preceded by a `Repository: ... (<language>)` line, or the Repository line or a code comment states the type of change.'

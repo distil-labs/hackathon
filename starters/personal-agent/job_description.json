@@ -1,0 +1,250 @@
+{
+  "task_description": "You are a personal assistant with access to the user's calendar, email, to-do list, notes, reminders and the weather. Help with one request at a time. Call a tool when it helps, with arguments taken only from the conversation: pass dates and times as the user said them, and never invent a name, address, time or id. When a required detail is missing, ask one short follow-up question instead of guessing. You may call several tools in one turn when they do not depend on each other. After tool results come back, answer in one or two short sentences based only on those results. Never send an email, and never delete or change anything, without the user's explicit confirmation in the conversation: draft first, show the draft, ask 'Send it?'. When no tool is needed, answer directly.",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "list_events",
+        "description": "List calendar events in a time range.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "description": "Date and time as the user said it, e.g. 'Friday 13:00', 'tomorrow 9am', '2026-12-03 15:30'. The app resolves it."
+            },
+            "end": {
+              "type": "string",
+              "description": "Date and time as the user said it, e.g. 'Friday 13:00', 'tomorrow 9am', '2026-12-03 15:30'. The app resolves it."
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "create_event",
+        "description": "Create a calendar event.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "start": {
+              "type": "string",
+              "description": "Date and time as the user said it, e.g. 'Friday 13:00', 'tomorrow 9am', '2026-12-03 15:30'. The app resolves it."
+            },
+            "duration_minutes": {
+              "type": "integer",
+              "default": 60
+            },
+            "attendees": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Names or email addresses."
+            },
+            "location": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "start"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_email",
+        "description": "Search the user's mailbox. Returns matching emails with id, sender, subject and snippet.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Words to search for."
+            },
+            "sender": {
+              "type": "string",
+              "description": "Name or address of the sender."
+            },
+            "unread_only": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "query"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "draft_email",
+        "description": "Write an email draft. Nothing is sent. Returns the draft id.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "subject": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "to",
+            "subject",
+            "body"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "send_email",
+        "description": "Send a draft. Only after the user has confirmed sending this draft in the conversation.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "draft_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "draft_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "add_task",
+        "description": "Add an item to the user's to-do list.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "due": {
+              "type": "string",
+              "description": "Date and time as the user said it, e.g. 'Friday 13:00', 'tomorrow 9am', '2026-12-03 15:30'. The app resolves it."
+            }
+          },
+          "required": [
+            "title"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "list_tasks",
+        "description": "List the user's to-do items.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "open",
+                "done",
+                "all"
+              ],
+              "default": "open"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_notes",
+        "description": "Search the user's notes. Returns matching notes with title and text.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "set_reminder",
+        "description": "Set a reminder that notifies the user at a time.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string",
+              "description": "Date and time as the user said it, e.g. 'Friday 13:00', 'tomorrow 9am', '2026-12-03 15:30'. The app resolves it."
+            }
+          },
+          "required": [
+            "text",
+            "at"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get the weather forecast for a place and day.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string"
+            },
+            "day": {
+              "type": "string",
+              "description": "Day as the user said it, e.g. 'today', 'Saturday'.",
+              "default": "today"
+            }
+          },
+          "required": [
+            "location"
+          ]
+        }
+      }
+    }
+  ],
+  "llm_as_a_judge_instructions": "Judge only the final assistant turn, given the conversation before it. Output 'good' if it does the right next step: calls the right tool or tools with arguments taken from the conversation (no invented values), or asks one short question when a required detail is missing, or answers correctly and briefly from the tool results, or answers directly when no tool is needed; and it never sends, deletes or changes anything without the user's explicit confirmation. Otherwise output 'bad'.",
+  "synthetic_data_generation_instructions": "Write realistic conversations between a busy person and their personal assistant: work meetings, family plans, errands, travel, health appointments, friends. Requests are short and casual, the way people type to an assistant on their phone. A conversation has one to three user turns. When the assistant calls tools, the next messages are the tool results as short JSON (lists of events, emails, notes or tasks with ids, or a status), then the assistant's short answer based only on those results. Use concrete names, places and times. Dates and times in tool arguments are copied as the user said them ('Friday 1pm', 'tomorrow morning'). Sending an email always takes two steps: draft_email, then the assistant shows the draft and asks 'Send it?'; send_email only after the user says yes."
+}

@@ -1,0 +1,68 @@
+base:
+  task: question-answering
+  student_model_name: Qwen3.5-2B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 2
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 0.0002
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  output_is_json: true
+  mutators:
+  - name: layout
+    values:
+    - a classic layout
+    - a modern layout
+    - a compact layout
+    - a two-column layout
+    - a ledger-style layout
+  - name: country
+    values:
+    - an invoice from a vendor in the US
+    - an invoice from a vendor in the UK
+    - an invoice from a vendor in India
+    - an invoice from a vendor in Australia
+    - an invoice from a vendor in France
+    - an invoice from a vendor in Canada
+    - an invoice from a vendor in Germany
+    target_distribution:
+    - 4
+    - 2
+    - 2
+    - 1.5
+    - 1.5
+    - 2
+    - 1.5
+  - name: line_items
+    values:
+    - an invoice with 1 or 2 line items
+    - an invoice with 3 or 4 line items
+    - an invoice with 5 or 6 line items
+    - an invoice with 7 or 8 line items
+    - an invoice with 9 to 12 line items
+    target_distribution:
+    - 2
+    - 3
+    - 3
+    - 2
+    - 1
+  - name: date_format
+    values:
+    - dates printed as ISO (2025-11-24)
+    - dates printed short (24 Nov 2025)
+    - dates printed EU style (24.11.2025 or 24/11/2025)
+    - dates printed long (November 24, 2025)
+    - dates printed US style (11/24/2025)
+    target_distribution:
+    - 3
+    - 2.5
+    - 2
+    - 1.5
+    - 1
+  validation_instructions: 'Re-derive the answer from the invoice text and reject the example if any of these fail: (1) every non-null value in the answer appears in the invoice text (money copied as printed without the symbol), and every field the invoice prints is filled; bill_to_address is the street address only, never the Attn contact line; (2) date and due_date are correct ISO conversions of the printed dates (numeric slash dates are MM/DD for US vendors and DD/MM for all other vendor countries); (3) currency matches the printed symbol and vendor country; (4) line_items lists every table row in order with the right quantity, unit price and amount, and nothing else; (5) the invoice''s numbers are consistent: line amount = qty x unit price, subtotal = sum of lines, tax = subtotal x rate (to the cent), total = subtotal + tax; (6) the answer is the JSON object with exactly the 15 keys from the task description. Also reject the example if a US vendor''s invoice prints a numeric slash date
+    whose first number is above 12, or a non-US vendor''s invoice prints one whose second number is above 12.'

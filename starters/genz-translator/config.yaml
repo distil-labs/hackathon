@@ -1,0 +1,58 @@
+base:
+  task: question-answering
+  student_model_name: Qwen3.5-4B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 3
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  mutators:
+  - name: topic
+    values:
+    - about school or exams
+    - about work or a job
+    - about food or restaurants
+    - about gaming or tech
+    - about dating or friends
+    - about family
+    - about money or shopping
+    - about music, movies or shows
+    - about sports or the gym
+    - about travel or weather
+  - name: sentence_form
+    values:
+    - a short statement of how the speaker feels right now (tired, bored, excited, hungry, stressed), 5-12 words
+    - a question or invitation to a friend that starts with 'Hey,' (want to hang out, did you see, are we still on), 6-15 words
+    - a plan for later today or this weekend, with a concrete time, day or place, 8-18 words
+    - a compliment or an opinion about something (a song, an outfit, a movie, food), 6-15 words
+    - a complaint or small problem (forgot something, something was bad, running late), 8-18 words
+    - a sentence that names a person and a number (an amount, a count, a time, a score), 10-22 words
+    - two joined clauses with a reason (so, because, but), 14-25 words
+    target_distribution:
+    - 3
+    - 3
+    - 2
+    - 2
+    - 2
+    - 1
+    - 2
+  validation_instructions: 'Check the answer against the input sentence and reject the example if any of these is true:
+
+    1. The answer adds a fact, a detail, a reaction or a comment that is not in the input (for example a brand name, an extra exclamation such as "it was lit", an invented reason or a new person), or drops a fact from the input (a person, a number, a time, a day, a place, a plan, a negation, who does what).
+
+    2. The answer does not clearly sound like current casual Gen Z speech: it has no Gen Z slang at all, or only generic casual words (cool, awesome, chill), or relies on dated slang (chillax, groovy, rad, da bomb).
+
+    3. The answer contains anything other than the rewritten sentence: quotes around it, a label, an explanation, alternatives, or a note.
+
+    4. The answer contains an emoji or a hashtag.
+
+    5. The answer is much longer than the input (more than about 1.5 times its word count plus 5 words).
+
+    6. The input is not a normal, plain English sentence (it is already slangy, it is several sentences, or it is not 5-25 words).
+
+    Accept the example only when none of these is true.
+
+    '

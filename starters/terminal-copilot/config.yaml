@@ -1,0 +1,56 @@
+base:
+  task: question-answering
+  student_model_name: Qwen3.5-4B
+  teacher_model_name: zai.glm-5.3-low-thinking
+  llm_num_parallel_requests: 32
+tuning:
+  num_train_epochs: 3
+evaluation:
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking
+synthgen:
+  train_generation_target: 1500
+  validation_instructions: 'Work out from the request what a correct Bash answer must do, then reject the example if any of these hold:
+
+    - the answer is wrapped in markdown code fences, or contains any explanation, prose or text before or after the Bash;
+
+    - the answer does not do what the request asks, uses a flag or option that does not exist in GNU/Linux tools, or would fail with a syntax error;
+
+    - the answer changes a file name, directory or path from the request (for example turns a bare relative name such as logs into /logs, /var/log or ~/logs), or invents values the request did not give;
+
+    - the answer does something destructive the request did not ask for: deleting, overwriting, moving or editing files in place, killing processes, or changing permissions beyond the request;
+
+    - the answer adds behaviour the request did not ask for, such as case-insensitive matching, skipping header lines, or filtering or reformatting the output;
+
+    - the request states the command or its flags instead of describing the goal in plain English.
+
+    '
+  mutators:
+  - name: shape
+    values:
+    - a single command
+    - a pipeline of 2-4 commands
+    - a short Bash script with a loop or variables
+    target_distribution:
+    - 4
+    - 3
+    - 3
+  - name: tool
+    values:
+    - about a task that mainly uses grep
+    - about a task that mainly uses find
+    - about a task that mainly uses tar
+    - about a task that mainly uses curl
+    - about a task that mainly uses awk
+    - about a task that mainly uses sed
+    - about a task that mainly uses cut
+    - about a task that mainly uses xargs
+    - about a task that mainly uses sort and uniq
+    - about a task that mainly uses chmod/chown
+    - about a task that mainly uses du/df
+    - about a task that mainly uses journalctl/systemctl
+    - about a task that mainly uses ps/kill
+    - about a task that mainly uses git
+    - about a task that mainly uses head, tail, wc or cat on a file
+    - about a task that mainly uses cp, mv, ls, stat or tr
+    - about a task that mainly uses rsync, ssh or scp
+    - about a task that mainly uses curl together with jq
