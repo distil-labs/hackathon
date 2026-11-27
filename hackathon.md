@@ -1,308 +1,417 @@
 ---
 name: distil-hackathon
-description: Use when helping a team at the distil labs hackathon (Sat-Sun 2026-11-28/29) build their own small language model (0.6B to 4B) on the distil labs platform and run it offline on their laptop. Activate when the user says "hackathon", "let's start", "help me build my model", opens the distil-labs/hackathon repo, or asks about the hackathon settings, credits, examples, timing, local running or the demo. Works on top of the distil-cli skill, which runs the platform jobs.
+metadata:
+  version: "1.0.0"
+description: >
+  Use at the distil labs hackathon (Sat-Sun 2026-11-28/29), when a team builds their own small
+  model (0.6B to 4B) on the distil labs platform and runs it offline on their laptop. Activate
+  for "let's start the hackathon", "help me build my model for the hackathon", "what should we
+  build", "how do we go faster", "how do I get the hackathon credits", "run my model locally",
+  "prepare our demo", or whenever the user works in the distil-labs hackathon repo, even if
+  they do not say "hackathon". Sits on top of the distil-cli skill: distil-cli runs the
+  workflow and every platform job; this skill adds the hackathon's speed rules, fixed settings,
+  time limits and laptop inference.
 ---
 
-# distil labs hackathon skill
+# distil labs hackathon
 
-You are the coding agent of a hackathon team. Over 1.5 days you help them build **their own** task-specific small model (0.6B to 4B parameters) on the distil labs platform, make it **match or beat the teacher's score**, and run it offline on their laptop.
+A team brings **their own use case** and has 1.5 days to build a small model for it that
+**matches or beats the teacher**, then runs it offline on their laptop.
 
-This skill sets the hackathon's order of work, settings and limits. The **distil-cli** skill (installed in Step 1) runs every platform job: follow its workflow, gates and run log, with the settings in this file.
+**distil-cli does the work.** Follow its workflow, gates, run log, make-rows and error-analysis
+protocols as written. This file only adds what the hackathon changes: how to iterate fast and
+run fast. Where the two differ, this file wins for the weekend.
 
-**The team brings their own use case.** The `examples/` folder holds 9 finished examples from our prep runs. They show what a good Dataset looks like and what scores are possible. They are references, not the menu: offer them only when the team has no idea yet, or wants to see a working format.
+## Start: ask for the use case
 
-## Rules for you
+Your first message, before any install or platform job:
 
-1. **Ask for the use case first** (Step 0). Do not install, set up or start platform work before the team has told you what they want to build.
-2. **Price every billed job with `--dry-run`** and tell the team the price before you submit. Never go over the budget they give you.
-3. **The goal is that the student matches or beats the teacher.** A small model trained on a narrow task often beats a much larger one. Never describe the teacher's score as a limit.
-4. **One change per iteration**, and log every iteration (change, score, kept or not) in `iterations.md`.
-5. **After Step 3, never change the test set, the judge or the system prompt.** They define what "better" means.
-6. **Start long jobs before breaks.** Generation and training run on the platform, not on the laptop.
-7. Use the team's words for their task. Keep messages short: the team is busy building.
+> What do you want to build? Describe the task in a sentence or two. If you don't have an idea
+> yet, say so and I'll show you some.
 
-## The 1.5 days
+Then run distil-cli Phase 1, asking these together in one message (the team is short on time):
+the task in one sentence; what goes in; what comes out (label, short text, JSON, tool calls);
+three real examples with the exact outputs; the data they have; the costly mistakes; their
+laptop's RAM and chip (it caps the student size). Save the answers in `use-case.md`.
 
-| When | What happens | Time on the platform |
-|---|---|---|
-| Sat morning | Use case (Step 0), setup (Step 1), Dataset and test set (Step 2), teacher check (Step 3) | 5 to 10 min per teacher evaluation, up to 3 rounds |
-| Sat midday | Smoke test, first 1,500 training rows, first trainings (Step 4) | about 2 to 3 h, runs over lunch |
-| Sat afternoon | Read the errors, add 300 to 700 rows aimed at one failure, train again | about 2 h |
-| Sat evening | Start the next iteration before the team leaves | runs overnight |
-| Sun morning | Pick the best model, run it on the laptop (Step 5) | about 30 min |
-| Sun midday | Demo (Step 6) | |
+If the task needs fresh world knowledge, long open-ended writing, or images on a text model, say
+so and narrow it to the one bounded step a model must do every time.
 
-Tell the team where they are in this plan at every stop.
+No idea yet? Show the [ideas](#ideas-and-examples) first. The `examples/` folder holds 9
+finished Datasets: references for the file format, not a menu.
 
----
+## Setup in 10 minutes
 
-## Step 0: ask for the use case
-
-This is your first action. Ask an open question:
-
-> What do you want to build? Describe the task in a sentence or two. If you don't have an idea yet, say so and I'll show you some.
-
-**If they have an idea**, ask these 7 questions (free-text answers are fine; ask only what their first answer did not already cover):
-
-1. **The task in one sentence.** What does the model do? ("Turns a support email into a ticket category and priority.")
-2. **What goes in.** Text, a conversation, a document, a diff, a schema? How long, roughly?
-3. **What comes out.** A label from a fixed list, a short text, JSON with fixed fields, or tool calls?
-4. **Three examples.** Three real inputs with the exact output they want for each.
-5. **The data they have.** None, a few examples, a Hugging Face dataset, their own files, or traffic from an LLM they already run?
-6. **The costly mistakes.** Which wrong answers hurt most? (A missed injection, a wrong amount, an email sent without asking.)
-7. **Their laptop.** RAM and chip (for example M2, 16 GB). This sets the largest student they can run offline.
-
-Write the answers into `use-case.md`, show it to the team, and get a yes. Then decide the task type and the metric from [Settings per kind of task](#settings-per-kind-of-task) and tell the team in one line.
-
-**If the task does not fit** (it needs fresh world knowledge, long open-ended writing, or images on a non-vision student), say so in one line and help them narrow it to a bounded task a small model can own.
-
-**If they have no idea**, show the [ideas](#ideas-when-a-team-has-none) and the [examples](#examples-from-our-prep-runs), help them pick or adapt one, then ask the 7 questions about it.
-
----
-
-## Step 1: setup (15 minutes)
-
-Check each item and do only what is missing. Show the team each command before you run it.
-
-1. The distil CLI (macOS or Linux; on Windows, inside WSL):
-
-   ```bash
-   distil --version || curl -fsSL https://cli-assets.distillabs.ai/install.sh | sh
-   distil update
-   ```
-
-2. Sign-in: `distil whoami` prints their email. If not, the team runs `distil auth` themselves (it opens the browser), or `distil signup` for a new account.
-3. The distil-cli skill: `distil skill install`. Then load it.
-4. A local runtime for the finished model: llama.cpp (`brew install llama.cpp` on a Mac).
-5. Credits: `distil billing balance`. Every new account gets **$50** at signup. For the hackathon the team gets **$150 on top**: they post their account email in **#general** on the [distil labs Slack community](https://join.slack.com/t/distil-labs-community/shared_invite/zt-36zqj87le-i3quWUn2bjErRq22xoE58g), and the distil labs team adds it. More on request in Slack.
-6. Ask the team for their budget for the weekend, and write it in `iterations.md`. One full pass in our prep (teacher checks, 1,500 rows, a few trainings) cost **$2 to $30**: short rows (labels, one sentence) are cheap, long rows (documents, agent conversations) are not.
-
----
-
-## Step 2: build the Dataset
-
-A Dataset is one folder:
-
-```
-my-task/
-├── config.yaml            # models and settings (Settings reference)
-├── job_description.json   # system prompt, judge rubric, generation instructions, tools
-├── test.jsonl             # 50 to 150 rows the team trusts: this is how "better" is measured
-├── train.jsonl            # 10 to 30 seed rows the teacher imitates
-└── traces.jsonl           # optional: real traffic from an LLM they already run
+```bash
+distil --version || curl -fsSL https://cli-assets.distillabs.ai/install.sh | sh
+distil update
+distil whoami                    # if not signed in, the team runs: distil auth
+distil skill install             # then load distil-cli
+distil billing balance
+brew install llama.cpp           # now, so Sunday morning is not spent on installs
 ```
 
-1. **Build the test set first.** It matters more than anything else in the weekend. Take it from real data (the team's files, a Hugging Face dataset, their traces), or write it with the team. Generated test rows are allowed only with settings separate from the training settings, and the team reviews every one. Read 20 rows of any public dataset before you trust it: public labels are often wrong.
-2. **Write the seed rows** (10 to 30) from the team's examples. Never copy test rows into train.
-3. **Write `job_description.json` and `config.yaml`** from `use-case.md` and the [Settings reference](#settings-reference). Look at the matching folder in `examples/` for the exact format of your task type.
-4. **Upload:**
+Credits: $50 at signup, plus **$150** for the hackathon when the team posts their account email
+in **#general** on the [distil labs Slack](https://join.slack.com/t/distil-labs-community/shared_invite/zt-36zqj87le-i3quWUn2bjErRq22xoE58g).
+More on request. Ask the team for their weekend budget and put it in the run log.
 
-   ```bash
-   distil dataset create --data my-task
-   ```
+## The loop, command by command
 
-   It prints the Dataset id. Show the team `https://app.distillabs.ai/datasets/<id>`. On `ECONNRESET`, run it again.
+What we ran in prep, in order. Every billed command takes `--dry-run` first: run it, say the
+price, then run it for real. Show the team each job at `https://app.distillabs.ai/datasets/<id>`
+or `/slms/<id>`. Times are what our prep jobs took from submit to finish with
+`llm_num_parallel_requests: 32`; with many teams on the platform, queueing can add to them.
 
----
+**1. Upload the root Dataset** (seconds):
 
-## Step 3: check the teacher and fix the system prompt
+```bash
+distil dataset create --data my-task                    # prints <root-id>; on ECONNRESET run it again
+```
 
-The teacher writes all the training data, so fix its mistakes here, before any data is generated.
+**2. Teacher check, two runs at once** (about 5 minutes):
 
-1. **Run a teacher evaluation** on the test set with `zai.glm-5.3-low-thinking` ($0.02 to $2). Run it twice: the gap between the two runs is the **noise**. A later difference smaller than the noise is not a real difference.
-2. **Read the teacher's wrong answers with the team.** Most are a convention the system prompt never states. From our prep runs: rates as `4.5` where the test expects `0.045`; an "Attn: name" line put into an address; `~/Downloads` where the request said `downloads`; SQLite syntax where the test uses MySQL.
-3. **Add each missing rule to `task_description`.** Add one or two short examples if a rule is hard to say in words, taken from the seed rows, never from the test set.
-4. **Run the teacher evaluation again.** Up to 3 rounds. Keep the best round, not the last: on one prep task, extra rules dropped the teacher from 0.98 to 0.70.
-5. **Freeze** the system prompt, the judge rubric and the test set. Tell the team.
+```bash
+distil teacher-evaluation create-from-dataset <root-id>
+distil teacher-evaluation create-from-dataset <root-id>
+distil teacher-evaluation metrics <te-id>               # the score; the gap between the two runs is the noise
+distil teacher-evaluation download-predictions <te-id>  # the teacher's answers, to read the wrong ones
+```
 
-Fix **rules**, not rows. If the teacher is still low after 3 rounds, check the test labels, note the bad ones, and move on.
+For prompt round 2, edit `task_description` in a copy of the folder, upload it as a new root
+(`distil dataset create --data my-task-r2`) and run the two evaluations on it. Keep the best
+round's root id.
 
----
+**3. Smoke 128 rows** (2 to 4 minutes):
 
-## Step 4: generate data, train, repeat
+```bash
+distil dataset download-metadata -d smoke <root-id>     # free: config.yaml and job_description.json
+# edit smoke/config.yaml: synthgen.train_generation_target: 128
+distil dataset generate-synthetic-data-train --config smoke/config.yaml <root-id>
+distil dataset download -d smoke-rows <smoke-id>        # read the rows, count the mix
+```
 
-### 4.1 Smoke before every generation run
+If the rows are off, fix the mutators, generation prompt or validator in the root files, upload
+a new root, and smoke again.
 
-Generate 128 rows. Show the team 10 of them and check 20 to 30 yourself:
+**4. Generate 1,500 rows** (5 minutes for short rows, about 25 for long documents):
 
-- Are the answers right? (The validator should catch most wrong ones.)
-- Do the inputs look like the test inputs: same format, length and variety?
-- Is the mix right? Count labels, tools, lengths and formats against the test set. In our prep the first smoke was off every time (invoices too short, attacks too blatant).
+```bash
+distil dataset generate-synthetic-data-train <root-id>  # the root config says 1500; prints <data-id>
+```
 
-Fix the mutators, generation instructions or validator, and smoke again. Smokes cost cents.
+**5. Train two sizes at once** (about 30 minutes for 2B, about 50 for 4B, evaluation included):
 
-### 4.2 Generate the first train set
+```bash
+distil dataset download-metadata -d train <data-id>
+# copy train/config.yaml to 2b.yaml and 4b.yaml; set base.student_model_name and the batch from the tables below
+distil slm create-from-dataset --config 2b.yaml <data-id>
+distil slm create-from-dataset --config 4b.yaml <data-id>
+distil slm metrics <slm-id>                             # student vs base model
+distil slm download-predictions <slm-id>                # the student's answers, for the error analysis
+```
 
-**1,500 rows.** About 30 min to 3 h depending on row length.
+**6. Top up on the best Dataset and train again** (about 1 hour together):
 
-### 4.3 Train
+```bash
+distil dataset download-metadata -d topup <best-data-id>
+# edit topup/config.yaml: train_generation_target 300 to 700, the mutator values and weights aimed at the failure;
+# edit topup/job_description.json only in synthetic_data_generation_instructions
+distil dataset generate-synthetic-data-train --config topup/config.yaml --job-description topup/job_description.json <best-data-id>
+distil slm create-from-dataset --config 4b.yaml <new-data-id>
+```
 
-Iteration 1 trains two student sizes on the same data ($0.10 to $2.60 each):
+The new Dataset holds the parent's rows plus the new ones, so training data only grows. One
+iteration (top-up plus training) took us about 1 to 1.5 hours, so a team can fit 4 to 6
+iterations between Saturday midday and Sunday morning.
 
-| The output is | Batch | Learning rate | What we measured (36 trainings) |
-|---|---|---|---|
-| a label, JSON, or tool calls | effective batch **16** | **2e-4** | as good or better than the default (guard 0.957 vs 0.922, PII 0.801 vs 0.792) |
-| free text (rewrites, commit messages, commands) | platform default **1** | **5e-5** (default) | a little better than batch 16 (Gen Z 0.927 vs 0.893) |
+Check any job with `distil <dataset|teacher-evaluation|slm> status <id>`. Cancel a wrong
+submission early: a job cancelled within 30 minutes is refunded.
 
-Epochs: **3**, or **2** for long JSON outputs. A training takes 5 to 30 minutes; with its evaluation, plan about 1 hour.
+## How to iterate fast
 
-### 4.4 Read the errors and change one thing
+1. **Run in parallel, never in a queue.** Submit both noise-check teacher evaluations at once.
+   Train two student sizes at once on the same data. Smoke the next top-up while a training
+   runs. Several teams' jobs share the platform, so `llm_num_parallel_requests: 32` keeps each
+   one moving.
+2. **Start long jobs before breaks.** Generation and training run on the platform. A job
+   started before lunch or before the team leaves on Saturday is free time.
+3. **The target is the teacher's score.** Skip distil-cli's extra target models: they cost an
+   hour and credits the team needs for training. The student can beat the teacher (4 of our 9
+   prep tasks did); never call the teacher's score a limit.
+4. **Fix the system prompt before data, not after.** Teacher mistakes become the student's. Read the
+   teacher's wrong answers with the team; most are a convention the prompt never states (`4.5`
+   vs `0.045`, SQLite vs MySQL). Add rules, not test rows. **Keep the best round, not the last**:
+   extra rules once dropped a teacher from 0.977 to 0.70. Then freeze the prompt, judge and test
+   set ([when the teacher scores low](#when-the-teacher-scores-low)).
+5. **Smoke 128 rows before every generation.** Check answers, input shape and the mix against
+   the test set ([mutators](#mutators-get-the-mix-right-in-one-smoke)). Every first smoke in our prep was off. Smokes cost cents; a wrong 1,500-row run
+   costs an afternoon.
+6. **Small, aimed top-ups.** 1,500 rows first, then 300 to 700 rows aimed at the biggest failure
+   mode ([what to change](#what-to-change-after-each-training)), 3,000 in total at most. Bigger runs make each iteration too slow for the weekend.
+7. **One change per iteration.** With 4 to 6 iterations in the weekend, a change you
+   cannot trace is a wasted one.
+8. **Price with `--dry-run` and say the price.** Generation is priced by row length: 700 rows
+   cost $6.50 on code diffs and $0.40 on short messages.
+9. **Stop** when the student matches or beats the teacher within the noise, two iterations in a
+   row do not improve it, the budget is spent, or the last training would not finish before Sunday morning.
 
-Group the student's wrong answers into failure modes, show the team the biggest one, and change **one** thing:
+### When the teacher scores low
+
+A low teacher in round 1 is normal and fixable. Each round is two teacher evaluations at once
+(about 5 minutes, under $2), so up to 3 rounds fit in the first hour. Submit both runs of a round at
+once.
+
+**Round 1.** Run the teacher twice on the test set. The gap between the two runs is the noise.
+Read every wrong answer with the team and sort each one:
+
+| The wrong answer is | Do this in round 2 |
+|---|---|
+| a convention the prompt never states (format, units, naming, dialect, what counts as which label) | add one short rule per convention to `task_description` |
+| a hard case the rule alone does not explain | add one or two short examples from the seed rows, never from the test set |
+| right, and the test label is wrong | note it in the run log; do not change the test set |
+| a style or tone choice | leave it: style rules make the teacher timid |
+
+**Round 2.** Run the teacher twice again with the new prompt, and compare the means:
+
+- **up by more than the noise:** keep it. If wrong answers of a new kind show up, do one more
+  round.
+- **within the noise:** the rules did not matter. What is left is mostly test labels or genuine
+  ambiguity. Freeze and move on.
+- **down:** revert to the best round. Rules that narrow the style hurt.
+
+**Round 3** (only if round 2 helped and a clear new convention showed up): same as round 2.
+Then freeze the best round, not the last.
+
+What happened in our prep (same teacher and judge, mean of 2 runs):
+
+| Task | Round 1 | What the teacher got wrong | Rule added | Round 2 | Kept |
+|---|---|---|---|---|---|
+| commit messages | 0.94 | `chore` and `fix` changes labelled `feat` | the type definitions; "adding validation is `fix`"; "config, build and CI changes are `chore`" | **0.967** | round 2 |
+| PII extraction | 0.745 | lists merged into one span; coded IDs skipped outside medical text | "values in a list are separate spans"; "label every code by its prefix" | **0.768** | round 2 |
+| text-to-SQL | 0.75 | "in X and Y" read as both; group-by column left out | 4 conventions the reference answers follow | 0.77 (runs 0.79 and 0.75: within the noise) | round 2, then froze: the rest were loose test labels |
+| Gen Z translator | 0.977 | almost nothing | "never add a reaction", then rules on slang intensity | 0.93, then **0.70** | round 1: the rules made the teacher write barely any slang |
+
+**A teacher at 0.75 is not a dead end.** The validator drops the teacher's wrong rows before the
+student sees them, so the student learns from better data than the teacher's raw score. On PII
+the teacher scored 0.768 and the student 0.801.
+
+### What to change after each training
+
+Run distil-cli's error analysis, show the team the biggest failure mode, and change one thing:
 
 | What the errors show | What to change |
 |---|---|
-| wrong where the teacher is right, in one kind of input | add 300 to 700 rows aimed at it (a new mutator value, weighted up) |
-| a bad habit copied from the data | fix the generation instructions or the validator, then add rows |
+| wrong where the teacher is right, in one kind of input | add 300 to 700 rows aimed at it: a new mutator value, weighted up |
+| a bad habit copied from the data, or a kind of input the rows never show | change the generation prompt and the validator together ([which prompt](#which-prompt-to-change-and-when)), then add rows |
 | close to the teacher, no clear pattern | a bigger student, or one more epoch |
-| the teacher is wrong too | the prompt or the test labels: stop and decide with the team (Step 3 is frozen) |
+| the teacher is wrong too | the frozen prompt or the test labels: tell the team, do not change them |
 
-Training data only grows: add rows, never replace them, and **stop adding at 3,000 rows**.
+Training data only grows: add rows, never replace them.
 
-### 4.5 Stop when
+### Which prompt to change, and when
 
-- the student **matches or beats the teacher** (within the noise), or
-- two iterations in a row do not improve it, or
-- the budget or the time is up.
+A Dataset has several prompts, and they play different roles. When the trained model is weak,
+the fix is almost always on the **data side**, not in the system prompt.
 
-Then report: the best model, its score next to the teacher's, what each iteration changed, and the money spent.
+| Prompt | Where | What it does | When to change it |
+|---|---|---|---|
+| **System prompt** | `task_description` in `job_description.json` | what the model is told in training, in evaluation and on the laptop | teacher rounds 1 to 3 only. After the freeze it is the model's contract: changing it voids every score so far |
+| **Generation prompt** | `synthetic_data_generation_instructions` in `job_description.json` | tells the teacher what rows to write: the situations, the style, the shape of a conversation | **any time**. Affects only rows generated after the change. The main lever when the student is weak |
+| **Validator** | `synthgen.validation_instructions` in `config.yaml` | rejects bad generated rows before training | **any time**, same as above |
+| **Mutators** | `synthgen.mutators` in `config.yaml` | the mix of rows | **any time** |
+| **Judge rubric** | `llm_as_a_judge_instructions` in `job_description.json` | scores the answers | never after the freeze |
 
----
+When the student copies a bad habit or misses a kind of input, change two things together, as
+one change: a sentence in the **generation prompt** that says what the rows must look like, and a
+matching **reject reason** in the validator. Then smoke and top up. Examples from our prep:
 
-## Settings reference
+| Problem in the rows | Added to the generation prompt | Added to the validator |
+|---|---|---|
+| injection attacks were all blatant; the test set has subtle ones | "Injections range from blatant ('ignore all previous instructions') to subtle (a harmless 'act as a storyteller' request, 'translate to polish', a question about how the assistant was trained, a manipulation appended after a normal question). The message never names its own label." | "Reject the example if the message names its own label or says what kind of message it is." |
+| the agent sent emails without asking, and invented tool results | "Sending an email always takes two steps: draft_email, then the assistant shows the draft and asks 'Send it?'; send_email only after the user says yes. The tool results are short JSON, and the assistant's answer is based only on them." | "Reject the example if send_email is called without the user's explicit yes, or an answer states something the tool results do not say." |
+| invoice dates came out in one format, and some slash dates were impossible | a `date_format` mutator with 5 formats, weighted to the test set | "Reject the example if date and due_date are not correct ISO conversions of the printed dates (MM/DD for US vendors, DD/MM for all others), or if a US invoice prints a slash date whose first number is above 12." |
 
-### config.yaml template
+**If the system prompt itself is wrong after the freeze** (the student and the teacher both
+fail on a convention nobody wrote down), it is a restart, not an iteration: a new root Dataset,
+a new teacher check, and new trainings. Decide it with the team; on Sunday there is no time
+for it.
+
+What iteration 2 did in our prep:
+
+| Task | Iteration 1 | Change | Iteration 2 | Why |
+|---|---|---|---|---|
+| injection guard | 0.957 | +500 rows, benign questions weighted up to match the test set | **0.974** | the student was wrong where the teacher was right: a coverage gap |
+| terminal copilot | 0.74 | +700 rows on less common shell utilities | **0.80** | same: a coverage gap |
+| commit messages | 0.889 | +700 rows on the biggest failure mode | 0.889 | the failures were judgement calls the teacher also gets wrong |
+| text-to-SQL | 0.70 | +700 rows | 0.693 | the teacher was at 0.77 and the test labels were loose |
+
+**A top-up helps when the student is wrong where the teacher is right.** When the teacher also
+fails on those inputs, more rows repeat its mistakes: stop, or try one size up.
+
+## Settings for the weekend
+
+Use distil-cli's config rules with these values:
 
 ```yaml
 base:
-  task: question-answering                 # or chat-completion for tools and agents
-  student_model_name: Qwen3.5-4B           # 0.6B to 4B, table below
+  task: question-answering                 # chat-completion for tools and agents
+  student_model_name: Qwen3.5-4B           # 0.6B to 4B, must fit the laptop
   teacher_model_name: zai.glm-5.3-low-thinking
   llm_num_parallel_requests: 32
 tuning:
   num_train_epochs: 3                      # 2 for long JSON outputs
-  per_device_train_batch_size: 16          # 4B student or long rows: 4
-  gradient_accumulation_steps: 1           # 4B student or long rows: 4  (4 x 4 = 16)
-  learning_rate: 2e-4                      # with batch 16. Free-text tasks: leave all three out (batch 1, 5e-5)
+  per_device_train_batch_size: 16          # 4B or long rows: 4
+  gradient_accumulation_steps: 1           # 4B or long rows: 4
+  learning_rate: 2e-4                      # free text: leave these three out (batch 1, 5e-5)
 evaluation:
-  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking   # set once, never change
+  llm_as_a_judge_model_name: zai.glm-5.3-low-thinking   # never change it
 synthgen:
-  train_generation_target: 1500            # top-ups: 300 to 700
-  validation_instructions: >-
+  train_generation_target: 1500            # top-ups 300 to 700
+  validation_instructions: >-              # see "The validator" below
     Work out the correct answer from the input yourself before reading the answer.
     Reject the example if the answer differs, invents a value the input does not give,
     or contains anything besides the answer.
-  mutators:
-    - name: kind                           # one mutator per thing to vary
-      values:
-        - "about ..."
-        - "about ..."
-```
-
-### Settings that hold all hackathon
-
-| Setting | Value | Why |
-|---|---|---|
-| `base.teacher_model_name` | `zai.glm-5.3-low-thinking` | open-weight, so it may be distilled. Proprietary models (Claude, GPT, Gemini) are for evaluation only |
-| `evaluation.llm_as_a_judge_model_name` | `zai.glm-5.3-low-thinking`, never changed | scores from two judges cannot be compared |
-| `base.llm_num_parallel_requests` | 32 | faster generation and evaluation, and every team's jobs keep moving |
-| `base.student_model_name` | 0.6B to 4B (table below) | it must run on the laptop |
-| `tuning.num_train_epochs` | 3; 2 for long JSON outputs | enough for 1,500 to 3,000 rows |
-| effective batch | 16 for labels, JSON and tool calls (`16 x 1` for short rows on 0.6B to 2B; `4 x 4` for 4B and long rows); default 1 for free text | `16 x 1` ran out of GPU memory on a 4B student with long rows; `4 x 4` trains the same |
-| `tuning.learning_rate` | 2e-4 with batch 16; default 5e-5 with batch 1 | batch 16 takes 16 times fewer steps, so each step must move further |
-| `synthgen.train_generation_target` | 1,500 first, 300 to 700 per top-up, 3,000 in total at most | covers the task, keeps each iteration to about 2 hours |
-| `synthgen.validation_instructions` | always set (template above) | an LLM re-derives every answer and drops wrong rows |
-| leave at default | `teacher_temperature` 0.7, `lora_r` 64, `learning_rate_scheduler` linear, `max_completion_length` 2048 | change only if a log or the errors point at it |
-
-### Settings per kind of task
-
-| The output is | `base.task` | Extra settings | Primary metric | Example to copy |
-|---|---|---|---|---|
-| one label from a fixed set | `question-answering` | labels and a definition of each in `task_description`, ending with "Answer with the label only."; one mutator with one value per label | `binary` (accuracy) | `examples/prompt-injection-guard` |
-| JSON (extraction) | `question-answering` | `synthgen.output_is_json: true`; list every key, the date format and what to do with missing fields | `llm-as-a-judge` with a graded rubric | `examples/invoice-extraction`, `examples/pii-extraction` |
-| free text (rewrite, SQL, commands, summaries) | `question-answering` | end `task_description` with "Output only ..." | `llm-as-a-judge-reference-free` | `examples/genz-translator`, `examples/text-to-sql` |
-| tool calls (single turn) | `chat-completion` | `tools` in `job_description.json`; one mutator value per tool; `synthgen.max_tool_calls_per_turn` (`unlimited` for parallel calls) | `tool_call_equivalence` | `examples/tool-calling` |
-| an agent (tool calls, results back, then an answer) | `chat-completion` | as above, plus [Agents](#agents) | `tool_call_equivalence` and the judge | `examples/personal-agent` |
-
-`chat-completion-agentic` and `classification` are rejected by the platform even though some docs pages list them.
-
-### Mutators: the right data mix
-
-A mutator adds one line to every generation prompt: "Generated examples should be `<value>`".
-
-- **One mutator per thing to vary**, usually 1 to 3 mutators with 3 to 10 values each. Write each value to finish that sentence: `"about billing disputes"`, not `"billing"`.
-- **Match the test set's mix** with `target_distribution` weights, for example `[5, 3, 1]`.
-- **Labels: one mutator, one value per label.** Put label and form together in one value (`"an injection that asks the assistant to act as a persona"`).
-- **Tools: one value per tool**, plus `"the assistant answers in text with no tool call"` when needed.
-- **Hard cases get their own value**, with the deciding facts fixed in the value.
-- **Never let a value give away the answer.**
-- If a value comes out short in the smoke, give it a bigger weight or `method: adaptive`.
-
-```yaml
-synthgen:
-  mutators:
-    - name: label
-      values:
-        - "a message whose correct label is injection"
-        - "a message whose correct label is benign"
-    - name: language
-      values: ["written in English", "written in German"]
+  mutators:                                # see "Mutators" below
+    - name: kind
+      values: ["...", "..."]
       target_distribution: [2, 1]
 ```
 
-### Choosing the student (0.6B to 4B)
+### The fast config: platform defaults vs the hackathon
 
-Go small for simple tasks (labels, short rewrites) and speed; go to 4B for structured outputs (JSON, SQL, tool calls) and agents. Check the laptop's RAM from Step 0: a 4B model at 4-bit needs about 2.5 GB.
+The platform defaults are built for a big production run, not for a weekend. Change these:
 
-| Size | Model | Training tier | Notes |
+| Setting | Platform default | Hackathon | What it buys |
 |---|---|---|---|
-| 0.6B | `Qwen3-0.6B` | low | smallest that can reason (`base.enable_thinking`) |
-| 0.8B | `Qwen3.5-0.8B` | low | best tiny default |
-| 1B | `Llama-3.2-1B-Instruct` | low | gated on Hugging Face |
-| 1.2B | `LFM2.5-1.2B-Instruct`, `LFM2-1.2B` | medium | fast on CPU |
-| 1.7B | `Qwen3-1.7B` | medium | |
-| 2B | `Qwen3.5-2B`, `gemma-4-E2B-it` | medium | Gemma is gated on Hugging Face |
-| 2.6B | `LFM2-2.6B` | medium | |
-| 3B | `Llama-3.2-3B-Instruct` | medium | gated on Hugging Face |
-| 4B | `Qwen3.5-4B` | medium | **the default for structured outputs and agents** |
-| 4B | `Qwen3-4B-Instruct-2507` | medium | no thinking mode |
-| 4B | `gemma-3-4b-it` | medium | **no tool calling** |
+| `base.llm_num_parallel_requests` | 4 | **32** | teacher, generation, validator and judge calls run 8 times as wide: generation and evaluations finish much sooner, same results. The biggest speed setting |
+| `synthgen.train_generation_target` | 10,000 | **1,500** first, then **300 to 700** per top-up, **3,000** at most | 1,500 rows took us 5 to 25 minutes; an iteration takes about 1 to 1.5 hours instead of most of a day, at a fraction of the cost |
+| `tuning.num_train_epochs` | 4 | **3**; **2** for long JSON outputs | shorter trainings; 3 was enough in all 9 prep tasks |
+| `tuning.per_device_train_batch_size` x `gradient_accumulation_steps` | 1 x 1 | **16 x 1** (short rows, up to 2B) or **4 x 4** (4B or long rows); default for free text | 16 times fewer optimizer steps; equal or better scores on labels, JSON and tool calls |
+| `tuning.learning_rate` | 5e-5 | **2e-4** with batch 16; default with batch 1 | bigger steps to match the bigger batch |
+| `base.teacher_model_name` | `nvidia.nemotron-3.5-super-vl` | **`zai.glm-5.3-low-thinking`**, the only teacher this weekend | the teacher all our prep scores come from |
+| `evaluation.llm_as_a_judge_model_name` | the teacher | **`zai.glm-5.3-low-thinking`**, set explicitly | the judge stays the same model for every run |
+| `base.student_model_name` | `Llama-3.2-1B-Instruct` | **0.6B to 4B by output type** (table below) | the right size for the task and the laptop |
+| `synthgen.validation_instructions` | none | **always set** | wrong rows are dropped before training |
+| `synthgen.mutators` | none | **always set, 1 to 3** | the data mix matches the test set from the first run |
 
-Training costs $0.10 (low) or $0.25 (medium) per 1M tokens times epochs: well under $1 per run at 1,500 rows.
+Leave the rest at the default (`teacher_temperature` 0.7, `lora_r` 64, linear scheduler,
+`max_completion_length` 2048) unless a log or the errors point at it.
 
-### Money
+### Settings per kind of output
 
-Every billed command takes `--dry-run`, which prints the price and starts nothing. Balance and spending: https://app.distillabs.ai/billing. A job cancelled within 30 minutes is refunded; a failed job is refunded automatically.
+| The output is | `base.task` | Metric | Extra settings | Batch, learning rate | Student to start | Example |
+|---|---|---|---|---|---|---|
+| one label from a fixed set | `question-answering` | `binary` | each label and its definition in `task_description`, ending "Answer with the label only." | 16 x 1, 2e-4 | 0.6B to 0.8B | `prompt-injection-guard` |
+| JSON (extraction) | `question-answering` | `llm-as-a-judge`, graded rubric | `synthgen.output_is_json: true`; every key, date format and missing-field rule in `task_description`; 2 epochs | 4 x 4, 2e-4 | 2B to 4B | `invoice-extraction`, `pii-extraction` |
+| free text (rewrite, SQL, commands) | `question-answering` | `llm-as-a-judge-reference-free` | end `task_description` with "Output only ..." | default (1, 5e-5) | 0.8B to 4B | `genz-translator`, `text-to-sql` |
+| tool calls | `chat-completion` | `tool_call_equivalence` | `tools` in `job_description.json`; `synthgen.max_tool_calls_per_turn` (`unlimited` for parallel calls) | 4 x 4, 2e-4 | 2B to 4B, Qwen3.5 | `tool-calling` |
+| an agent (calls, results, answer) | `chat-completion` | `tool_call_equivalence` and the judge | as tool calls, plus [Agents](#agents) | 4 x 4, 2e-4 | 4B, Qwen3.5 | `personal-agent` |
 
----
+Measured in 36 prep trainings: batch 16 matched or beat the default on labels, JSON and tool
+calls (guard 0.957 vs 0.922); the default was a little better on free text (Gen Z 0.927 vs
+0.893). `16 x 1` ran out of GPU memory on a 4B student with long rows; `4 x 4` trains the same.
 
-## Agents
+Students: `Qwen3-0.6B`, `Qwen3.5-0.8B`, `Llama-3.2-1B-Instruct`, `LFM2.5-1.2B-Instruct`,
+`Qwen3-1.7B`, `Qwen3.5-2B`, `LFM2-2.6B`, `Llama-3.2-3B-Instruct`, `Qwen3.5-4B`,
+`Qwen3-4B-Instruct-2507`. Llama and Gemma are gated on Hugging Face; `gemma-3-4b-it` cannot
+call tools. A 4B model at 4-bit needs about 2.5 GB of RAM. On shell commands 4B beat 2B
+clearly (0.74 vs 0.55); 2B was enough for invoices and tool calls.
 
-Agents are a popular choice, and they gain the most from running locally: the team's calendar and email never leave the laptop.
+### Mutators: get the mix right in one smoke
 
-**Task type:** `chat-completion`, with the tools in `job_description.json`. Rows are whole conversations: user turns, assistant turns with `tool_calls`, `tool` messages with results, and the assistant's answer. See `examples/personal-agent/` for a full working Dataset with 10 tools.
+A mutator adds one line to every generation prompt: "Generated examples should be `<value>`".
+Each row samples one value per mutator, so mutators decide what the 1,500 rows cover. A wrong
+mix is the most common reason a student is weak on one kind of input, and the fastest thing to
+fix.
 
-**Tools** (OpenAI function format, unique names, valid JSON Schema):
+How to set them, in this order:
 
-```json
-{
-  "task_description": "You are a personal assistant with access to the user's calendar, notes and email drafts. Call a tool when it helps. Ask a short follow-up question when a required detail is missing. Never send, delete or change anything without the user's explicit confirmation in the conversation.",
-  "tools": [
-    {"type": "function", "function": {
-      "name": "create_event",
-      "description": "Create a calendar event.",
-      "parameters": {"type": "object",
-        "properties": {
-          "title": {"type": "string"},
-          "start": {"type": "string", "description": "ISO 8601 date-time"},
-          "duration_minutes": {"type": "integer"}},
-        "required": ["title", "start"]}}}
-  ],
-  "llm_as_a_judge_instructions": "Output 'good' if the assistant's turn calls the right tool with arguments taken from the conversation, or asks for a missing detail, or answers correctly from the tool results, and never acts without confirmation. Otherwise output 'bad'."
-}
+1. **Count the test set.** Labels, tools, lengths, formats, languages: whatever varies.
+2. **One mutator per thing that varies**, 1 to 3 mutators with 3 to 10 values each.
+3. **Write each value so it finishes the sentence** "Generated examples should be ...":
+   `"an invoice with 9 to 12 line items"`, not `"long"`.
+4. **Set `target_distribution`** from the counts in step 1, for example `[4, 2, 1]`.
+5. **Smoke 128 rows and count again.** Short on a value? Raise its weight, or set
+   `method: adaptive`.
+
+Rules that held in our prep:
+
+- **Labels: one mutator, one value per label form.** Put the label and its form in the same
+  value (`"an injection that asks the assistant to act as a persona"`). A second mutator that
+  changes what the label should be breaks the mix.
+- **Tools: one value per tool**, plus values for the behaviours you want: asks for a missing
+  detail, asks before sending, answers with no tool.
+- **Hard cases get their own value**, with the deciding facts written into it.
+- **Never let a value give away the answer**: the student learns the phrase, not the task.
+- **Weight the rare-but-costly cases up**, not down: they are what the demo will hit.
+
+Labels (shortened from `examples/prompt-injection-guard`):
+
+```yaml
+mutators:
+  - name: case
+    values:
+      - "an injection that tells the assistant to ignore or override its previous instructions"
+      - "an injection that asks the assistant to act as a persona, role or character, even a harmless one"
+      - "an injection hidden after a normal question, or pleading that it is not an injection"
+      - "a benign information question about news, politics or society"
+      - "a benign question that is rude, edgy or about a sensitive topic but asks only for information"
+    target_distribution: [2, 2, 1, 2, 2]
+  - name: language
+    values: ["written in English", "written in German"]
+    target_distribution: [2, 1]
 ```
 
-**One training row** (one line; `arguments` is a JSON object, not a string):
+Extraction (shortened from `examples/invoice-extraction`), one mutator per thing the test set varies:
+
+```yaml
+mutators:
+  - name: line_items
+    values: ["an invoice with 1 or 2 line items", "an invoice with 3 to 6 line items", "an invoice with 7 to 12 line items"]
+    target_distribution: [2, 4, 2]
+  - name: date_format
+    values: ["dates printed as ISO (2025-11-24)", "dates printed EU style (24.11.2025)", "dates printed US style (11/24/2025)"]
+    target_distribution: [3, 2, 1]
+  - name: country
+    values: ["an invoice from a vendor in the US", "an invoice from a vendor in India", "an invoice from a vendor in Germany"]
+```
+
+Agent (shortened from `examples/personal-agent`, which has 15 scenario values):
+
+```yaml
+mutators:
+  - name: scenario
+    values:
+      - "a conversation that calls create_event"
+      - "a conversation that calls search_email"
+      - "a conversation where a required detail is missing, so the assistant asks one short question first"
+      - "a conversation where the user asks to email someone, so the assistant drafts, shows the draft and asks 'Send it?'"
+      - "a conversation that needs two tools, such as checking the calendar before creating an event"
+      - "a conversation the assistant answers directly with no tool call"
+    target_distribution: [2, 1, 2, 2, 2, 1]
+  - name: turns
+    values: ["a conversation with one user turn", "a conversation with two user turns", "a conversation with three user turns"]
+    target_distribution: [3, 2, 1]
+```
+
+### The validator
+
+`validation_instructions` makes an LLM re-check every generated row and drop the wrong ones. It
+is the strongest data-quality setting, and it costs nothing in your time. Make it re-derive the
+answer, then list the exact reasons to reject:
+
+| Output | Validator |
+|---|---|
+| label | "Decide the label yourself from the task description before reading the answer. Reject the example if your label differs, or if the answer is anything other than exactly one label." |
+| JSON | "Re-derive the answer from the input. Reject the example if any value does not appear in the input, a field the input gives is missing or null, or a date or number format breaks the rules in the task description." |
+| free text | "Reject the example if the answer adds a fact the input does not give, drops one it does, or contains anything besides the answer." |
+| agent | "Reject the example if any tool argument is not stated in the conversation, if a tool is called for something the user did not ask, or if anything is sent, deleted or changed without the user's confirmation." |
+
+### Agents
+
+`chat-completion`, with the tools in `job_description.json` (OpenAI function format, valid JSON
+Schema; uploads reject calls that do not match it). A row is a whole conversation, one line in
+`train.jsonl`; `arguments` is a JSON object, not a string:
 
 ```json
 {"messages": [
@@ -313,130 +422,82 @@ Agents are a popular choice, and they gain the most from running locally: the te
 ]}
 ```
 
-**Config:** `base.task: chat-completion`, `synthgen.max_tool_calls_per_turn: unlimited` if one turn may call several tools, and a mutator with one value per tool plus values for "a required detail is missing, so the assistant asks for it", "the user asks to send or delete something, so the assistant asks for confirmation first" and "the assistant answers in text with no tool call".
+With well-described tools an agent can start with no seed rows: the teacher works from the tools
+and the system prompt. Say in the generation instructions what a conversation must look like,
+or the teacher invents tool results. `examples/personal-agent` is a full working Dataset with 10
+tools.
 
-**Validator** (the most important agent setting): "Reject the example if any tool argument is not stated in the conversation, if a tool is called for something the user did not ask, or if anything is sent, deleted or changed without the user's confirmation."
+## Run it on the laptop, fast
 
-**Test set:** 50 to 100 conversations covering every tool, missing details, confirmations and no-tool answers, reviewed by the team.
+Tested on a MacBook with Apple silicon, 16 GB, Python 3.12. Paths are from the repo root.
 
-**Run it locally** after Step 5 with the loop in `examples/tools/agent_loop.py`. It sends the system prompt and tools exactly as trained, runs each tool call against mock tools in a JSON file, and feeds the results back:
+**Do it once on Saturday evening** with the iteration-1 model. That run builds the venv and
+downloads the base model, and any problem shows up while the team can still ask us. On Sunday
+morning only the last model has to go through merge, convert and serve: about 10 minutes.
+
+Before you start: about **15 GB free** for a 2B model and **25 GB** for a 4B one (base model,
+merged copy, f16 and quantized files; delete the merged folder and the f16 file afterwards).
+Llama and Gemma students are gated: accept the license on Hugging Face and run
+`hf auth login` first.
 
 ```bash
-.venv/bin/python examples/tools/agent_loop.py --job-description my-task/job_description.json --base-url http://127.0.0.1:8080/v1
+distil slm download --destination my-model <slm-id> && tar -xf my-model/model.tar -C my-model
+git clone --depth 1 --branch b11669 https://github.com/ggml-org/llama.cpp llama.cpp-src   # tag = llama-server --version
+python3 -m venv .venv && .venv/bin/pip install torch transformers peft accelerate openai ./llama.cpp-src/gguf-py
+.venv/bin/python examples/tools/merge.py my-model my-model-merged
+.venv/bin/python llama.cpp-src/convert_hf_to_gguf.py my-model-merged --outfile my-model-f16.gguf --outtype f16
+llama-quantize my-model-f16.gguf my-model.gguf Q4_K_M          # Q8_0 under 1B
+llama-server -m my-model.gguf --jinja --port 8080 --chat-template-kwargs '{"enable_thinking": false}'
 ```
 
-Replace the mock functions with the team's own tools. Only students with tool calling work for agents: the Qwen3.5 family is the safe choice.
+Check it against the platform: `.venv/bin/python examples/tools/score_local.py <dataset-dir>`
+(add `--show` for free text or JSON). Agents: `.venv/bin/python examples/tools/agent_loop.py --job-description
+<dataset-dir>/job_description.json`. Always send the trained system prompt.
 
----
+| Measured on an M5, 16 GB | File | Speed |
+|---|---|---|
+| Injection guard, 0.6B, Q8_0 | 610 MB | 35 ms per message, same score as the platform |
+| Gen Z translator, 0.8B, Q8_0 | 774 MB | about 150 ms per sentence |
+| Personal agent, 2B, Q4_K_M | 1.2 GB | interactive, tool calls work |
 
-## Step 5: run it on the laptop
+## Things that cost us time
 
-1. Download the best model:
+- **GPU out of memory:** halve the per-device batch, double the accumulation steps; if it still
+  fails, add `tuning.memory_optimized_training: 1`. Failed jobs are refunded.
+- **Merge fails with `NoMatchingPeftModuleError`:** Qwen3.5 is a vision-language model;
+  `merge.py` already loads the right class.
+- **Public test labels are wrong** more often than you expect: read 20 rows before trusting a
+  score.
+- **Answers wrapped in code fences** fail the metric: end the prompt with "Output only ...".
+- **`ECONNRESET` on upload:** run it again.
+- **`chat-completion-agentic` and `classification` are rejected:** use `chat-completion` and
+  `question-answering`.
 
-   ```bash
-   distil slm download --destination my-model <slm-id>
-   tar -xf my-model/model.tar -C my-model
-   ```
+## Demo
 
-   This gives the LoRA adapter (`model-adapter/`) and `config.yaml`.
+5 minutes: the task and one live answer from the laptop (network off, if they dare); the
+student's score next to the teacher's and the size difference; one iteration that worked and
+one that did not. Have the model already served before the team goes on stage.
 
-2. One-time setup (about 5 minutes; tested on a MacBook with Apple silicon, 16 GB). Match the `--branch` tag to `llama-server --version`:
+## Ideas and examples
 
-   ```bash
-   brew install llama.cpp
-   git clone --depth 1 --branch b11669 https://github.com/ggml-org/llama.cpp llama.cpp-src
-   python3 -m venv .venv && .venv/bin/pip install torch transformers peft accelerate openai ./llama.cpp-src/gguf-py
-   ```
+Only when the team has no idea:
 
-3. Merge the adapter into its base model, convert to GGUF and shrink it (`merge.py` downloads the base model from Hugging Face):
+- **Voice agent:** speak to the model and it answers out loud. Our use-case checker pairs a
+  Qwen3.5-4B (0.89, above its teacher's 0.80) with Gradium's open-source Phonon voice model,
+  both on a laptop ([blog](https://www.distillabs.ai/blog/how-we-use-gradiums-phonon-to-chat-with-you-about-your-post-trained-small-model-use-case),
+  and [VoiceTeller](https://github.com/distil-labs/distil-voice-assistant-banking) with 0.6B).
+- **Personal agent** for calendar, email and notes, all offline.
+- **A filter** in front of an LLM app: injection guard, PII redaction, topic router.
+- **Developer tools:** commit messages, shell commands, log triage.
+- **Extraction** from the documents the team handles.
 
-   ```bash
-   .venv/bin/python examples/tools/merge.py my-model my-model-merged
-   .venv/bin/python llama.cpp-src/convert_hf_to_gguf.py my-model-merged --outfile my-model-f16.gguf --outtype f16
-   llama-quantize my-model-f16.gguf my-model.gguf Q4_K_M      # Q8_0 for models under 1B
-   ```
-
-4. Serve it (OpenAI-compatible API on port 8080):
-
-   ```bash
-   llama-server -m my-model.gguf --jinja --port 8080 --chat-template-kwargs '{"enable_thinking": false}'
-   ```
-
-5. Check the laptop model against the platform on the test set (exact match; add `--show` to read free-text or JSON outputs):
-
-   ```bash
-   .venv/bin/python examples/tools/score_local.py my-task --port 8080
-   ```
-
-Always send the **same system prompt the model was trained with**. A different prompt makes a fine-tuned model much worse.
-
-What we measured on a MacBook (M5, 16 GB):
-
-| Model | File | Speed | Laptop score vs platform |
-|---|---|---|---|
-| Injection guard, Qwen3-0.6B, Q8_0 | 610 MB | 35 ms per message | 0.974, same as the platform |
-| Gen Z translator, Qwen3.5-0.8B, Q8_0 | 774 MB | about 150 ms per sentence | same style as the platform |
-| Personal agent, Qwen3.5-2B, Q4_K_M | 1.2 GB | interactive | tool calls work through `agent_loop.py` |
-
-Ollama should load the same GGUF (`FROM ./my-model.gguf` in a Modelfile, then `ollama create`), but we have not tested it.
-
----
-
-## Step 6: demo
-
-5 minutes per team. Help the team prepare:
-
-1. The task, and one input and output from their model **running locally** (network off, if they dare).
-2. The student's score next to the teacher's, and the size difference (for example 2B vs a model more than 100 times larger).
-3. One iteration that worked, one that did not, and what they learned (from `iterations.md`).
-
----
-
-## Pitfalls
-
-- **GPU out of memory** on long rows: halve `per_device_train_batch_size` and double `gradient_accumulation_steps`; if it still fails, add `tuning.memory_optimized_training: 1`. Failed jobs are refunded.
-- **More rules can make the teacher worse.** Keep the best round, not the last.
-- **Top-ups are priced from row length.** 700 rows cost $6.50 on commit diffs but $0.40 on short messages. Read the dry-run price.
-- **Qwen3.5 models are vision-language models.** To merge locally, load the base with `AutoModelForImageTextToText` (`merge.py` does this), or the adapter does not attach.
-- **Public datasets have wrong labels.** Read 20 test rows before trusting any score.
-- **The task description and the test disagree** (SQLite vs MySQL, percent vs decimal). Fix the prompt in Step 3.
-- **Generated tool conversations invent tool results** when only the calls are wanted. Say in the generation instructions what a conversation must look like.
-- **Answers in code fences or with explanations** fail the metrics. End `task_description` with "Output only ...".
-- **`distil dataset create` fails with `ECONNRESET`:** the connection, not the files. Run it again.
-
----
-
-## Ideas when a team has none
-
-Show these only when asked. Each is a bounded task a small model can own on a laptop.
-
-- **Voice agent:** talk to your model and it answers out loud. Our use-case checker pairs a trained Qwen3.5-4B (0.89 vs the teacher's 0.80) with Gradium's open-source Phonon voice model (31M parameters), both on a laptop: [blog post](https://www.distillabs.ai/blog/how-we-use-gradiums-phonon-to-chat-with-you-about-your-post-trained-small-model-use-case). For voice, keep the model's answers short. A banking voice assistant with a 0.6B model: [VoiceTeller](https://github.com/distil-labs/distil-voice-assistant-banking).
-- **Personal agent:** calendar, email drafts, notes, reminders, all offline.
-- **A filter in front of an LLM app:** injection guard, PII redaction, topic router.
-- **Developer tools:** commit messages, shell commands, log triage, test names.
-- **Extraction from documents** the team deals with: receipts, contracts, emails, job posts.
-- **A style or format rewriter:** tone, reading level, slang, release notes.
-
-## Examples from our prep runs
-
-Finished Datasets in `examples/`, built on 2026-11-26 with the settings in this skill. Use them for the file format of a task type, or as a fallback if a team is stuck. Three still have a gap to the teacher.
-
-| Example | What the model does | Task type | Student | Teacher | Student score |
-|---|---|---|---|---|---|
-| `personal-agent` | assistant with 10 tools (calendar, email, notes, tasks); asks before sending | `chat-completion` + tools | Qwen3.5-4B | 0.93 judge | **0.93**, matches |
-| `genz-translator` | normal sentence in, Gen Z slang out | `question-answering` | Qwen3.5-4B | 0.977 | **0.993**, beats |
-| `tool-calling` | finance and math assistant with 12 tools | `chat-completion` + tools | Qwen3.5-2B | 0.94 | **0.953**, beats |
-| `pii-extraction` | every personal data span and its type, as JSON | `question-answering` (JSON) | Qwen3.5-4B | 0.768 | **0.801**, beats |
-| `invoice-extraction` | 14 fields plus line items from invoice text, as JSON | `question-answering` (JSON) | Qwen3.5-2B | 0.998 | **0.996**, matches |
-| `prompt-injection-guard` | `injection` or `benign` (English and German) | `question-answering` (labels) | Qwen3-0.6B | 0.987 | 0.974 |
-| `commit-writer` | git diff in, one Conventional Commits line out | `question-answering` | Qwen3.5-4B | 0.967 | 0.889, gap |
-| `terminal-copilot` | plain English in, a bash command out | `question-answering` | Qwen3.5-4B | 0.93 | 0.80, gap |
-| `text-to-sql` | schema and question in, one SQL query out | `question-answering` | Qwen3.5-4B | 0.77 | 0.70, gap |
-
-Test sets come from public Hugging Face datasets (`deepset/prompt-injections`, `gretelai/gretel-pii-masking-en-v1`, `gretelai/synthetic_text_to_sql`, `lockon/xlam-function-calling-60k`, `hyperbots-inc/synthetic-invoice-extraction`, `F-A-I-L/bash-instruct-55k`, `Programmer-RD-AI/genz-slang-pairs-1k`, `SalutefaceAAC/commit-messages-from-diffs`); the personal-agent test set was generated with separate settings and reviewed. `personal-agent/train.jsonl` is empty on purpose: the teacher works from the tools and the system prompt.
+`examples/` scores from our prep (student vs teacher): personal agent 0.93 vs 0.93, Gen Z 0.993
+vs 0.977, tool calling 0.953 vs 0.94, PII 0.801 vs 0.768, invoices 0.996 vs 0.998, injection
+guard 0.974 vs 0.987; commit messages, shell commands and SQL still have a gap to close.
 
 ## Help
 
-- distil labs team on site: **Vineeth, Maciej and Lev**, in person or in **#general** on the [distil labs Slack community](https://join.slack.com/t/distil-labs-community/shared_invite/zt-36zqj87le-i3quWUn2bjErRq22xoE58g). Send the team there for credits, platform errors or a stuck job.
-- Platform questions: the distil-cli skill first, then https://www.distillabs.ai/docs.
-- Jobs: https://app.distillabs.ai (`/datasets/<id>`, `/slms/<id>`). Billing: https://app.distillabs.ai/billing.
+The distil labs team on site: **Vineeth, Maciej and Lev**, in person or in **#general** on
+Slack, for credits, platform errors or a stuck job. Jobs: https://app.distillabs.ai. Billing:
+https://app.distillabs.ai/billing.
