@@ -45,8 +45,8 @@ finished Datasets: references for the file format, not a menu.
 ```bash
 distil --version || curl -fsSL https://cli-assets.distillabs.ai/install.sh | sh
 distil update
-distil whoami                    # if not signed in, the team runs: distil auth
-distil skill install             # then load distil-cli
+distil auth
+distil skill install             # DO NOT OMIT THIS, this is your skill dependency
 distil billing balance
 brew install llama.cpp           # now, so Sunday morning is not spent on installs
 ```
