@@ -1,0 +1,25 @@
+name: Skill sync
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  skill-sync:
+    name: Keep skill files identical
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Compare skill copies
+        run: |
+          if ! cmp -s hackathon.md .claude/skills/distil-hackathon/SKILL.md; then
+            echo "::error::The skill copies differ. Update both hackathon.md and .claude/skills/distil-hackathon/SKILL.md."
+            diff -u hackathon.md .claude/skills/distil-hackathon/SKILL.md
+            exit 1
+          fi
