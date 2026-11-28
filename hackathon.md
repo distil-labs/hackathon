@@ -18,6 +18,10 @@ description: >
 A team brings **their own use case** and has 1.5 days to build a small model for it that
 **matches or beats the teacher**, then runs it offline on their laptop.
 
+Here, "offline" and "fully offline" mean the finished app runs locally without a network connection.
+Cloud training on the distil labs platform is expected, including synthetic data generation and evaluation.
+Do not ask whether cloud training is allowed unless the user explicitly requires development or training to stay local.
+
 **distil-cli does the work.** Follow its workflow, gates, run log, make-rows and error-analysis
 protocols as written, except the two steps [skipped for speed](#the-weekend-step-by-step). This
 file only adds what the hackathon changes: how to iterate fast and run fast. Where the two
@@ -55,7 +59,8 @@ brew install llama.cpp           # now, so Sunday morning is not spent on instal
 
 Credits: $50 at signup, plus **$150** for the hackathon when the team posts their account email
 in **#general** on the [distil labs Slack](https://join.slack.com/t/distil-labs-community/shared_invite/zt-36zqj87le-i3quWUn2bjErRq22xoE58g).
-More on request. Ask the team for their weekend budget and put it in the run log.
+More on request. Reuse the weekend budget already set in the conversation or run log.
+Only ask for the budget if it has not been set. Record it in the run log.
 
 ## Starting with no data
 
